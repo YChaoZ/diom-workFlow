@@ -119,9 +119,13 @@ import {
 import BpmnModeler from 'bpmn-js/lib/Modeler'
 import {
   BpmnPropertiesPanelModule,
-  BpmnPropertiesProviderModule
+  BpmnPropertiesProviderModule,
+  CamundaPlatformPropertiesProviderModule
 } from 'bpmn-js-properties-panel'
 import CamundaBpmnModdle from 'camunda-bpmn-moddle/resources/camunda.json'
+
+// 引入Camunda行为模块
+import CamundaBehaviorsModule from 'camunda-bpmn-js-behaviors/lib/camunda-platform'
 
 // 引入自定义Toolbar
 import Toolbar from './Toolbar.vue'
@@ -216,7 +220,9 @@ const initBpmnModeler = () => {
     },
     additionalModules: [
       BpmnPropertiesPanelModule,
-      BpmnPropertiesProviderModule
+      BpmnPropertiesProviderModule,
+      CamundaPlatformPropertiesProviderModule,  // ⭐ 新增：Camunda属性提供器
+      CamundaBehaviorsModule  // ⭐ 新增：Camunda行为模块
     ],
     moddleExtensions: {
       camunda: CamundaBpmnModdle
@@ -558,9 +564,10 @@ const getActionLabel = (action) => {
 }
 
 .designer-properties {
-  width: 300px;
+  width: 320px;  /* 增加宽度以显示更多内容 */
   background: #fff;
   overflow-y: auto;
+  border-left: 1px solid #e4e7ed;
 }
 
 .properties-container {
@@ -585,6 +592,198 @@ const getActionLabel = (action) => {
 
 :deep(.djs-container) {
   background-color: #fafafa;
+}
+
+/* ===== 属性面板整体样式 ===== */
+:deep(.bio-properties-panel) {
+  background: #fafafa;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 13px;
+  color: #333;
+}
+
+/* ===== 属性面板头部 ===== */
+:deep(.bio-properties-panel-header) {
+  background: #fff;
+  border-bottom: 2px solid #409eff;
+  padding: 12px 15px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #409eff;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+/* ===== 属性分组标题 ===== */
+:deep(.bio-properties-panel-group-header) {
+  background: #f5f7fa;
+  padding: 10px 15px;
+  font-weight: 600;
+  font-size: 13px;
+  border-top: 1px solid #e4e7ed;
+  border-bottom: 1px solid #e4e7ed;
+  color: #606266;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+:deep(.bio-properties-panel-group-header:hover) {
+  background: #ecf5ff;
+}
+
+/* ===== 属性条目 ===== */
+:deep(.bio-properties-panel-entry) {
+  padding: 12px 15px;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.2s;
+}
+
+:deep(.bio-properties-panel-entry:hover) {
+  background: #f9f9f9;
+}
+
+/* ===== 属性标签 ===== */
+:deep(.bio-properties-panel-label) {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #606266;
+}
+
+/* ===== 输入框样式 ===== */
+:deep(.bio-properties-panel-input),
+:deep(.bio-properties-panel-textarea) {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #606266;
+  background: #fff;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+:deep(.bio-properties-panel-input:focus),
+:deep(.bio-properties-panel-textarea:focus) {
+  border-color: #409eff;
+  outline: none;
+  background: #fff;
+}
+
+:deep(.bio-properties-panel-input:disabled),
+:deep(.bio-properties-panel-textarea:disabled) {
+  background: #f5f7fa;
+  color: #c0c4cc;
+  cursor: not-allowed;
+}
+
+/* ===== 下拉选择框样式 ===== */
+:deep(.bio-properties-panel-select) {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  font-size: 13px;
+  background: #fff;
+  cursor: pointer;
+}
+
+:deep(.bio-properties-panel-select:focus) {
+  border-color: #409eff;
+  outline: none;
+}
+
+/* ===== 复选框样式 ===== */
+:deep(.bio-properties-panel-checkbox) {
+  margin-right: 6px;
+  cursor: pointer;
+}
+
+/* ===== 按钮样式 ===== */
+:deep(.bio-properties-panel-button) {
+  padding: 6px 12px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  background: #fff;
+  color: #606266;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+:deep(.bio-properties-panel-button:hover) {
+  background: #ecf5ff;
+  border-color: #409eff;
+  color: #409eff;
+}
+
+/* ===== 列表样式 ===== */
+:deep(.bio-properties-panel-list) {
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+:deep(.bio-properties-panel-list-entry) {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fff;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+:deep(.bio-properties-panel-list-entry:hover) {
+  background: #f5f7fa;
+}
+
+:deep(.bio-properties-panel-list-entry:last-child) {
+  border-bottom: none;
+}
+
+/* ===== 错误提示样式 ===== */
+:deep(.bio-properties-panel-error) {
+  color: #f56c6c;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+/* ===== 帮助提示样式 ===== */
+:deep(.bio-properties-panel-description) {
+  color: #909399;
+  font-size: 11px;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+/* ===== 折叠/展开图标 ===== */
+:deep(.bio-properties-panel-group-header-icon) {
+  float: right;
+  transition: transform 0.2s;
+}
+
+:deep(.bio-properties-panel-group--collapsed .bio-properties-panel-group-header-icon) {
+  transform: rotate(-90deg);
+}
+
+/* ===== 滚动条样式 ===== */
+.designer-properties::-webkit-scrollbar {
+  width: 8px;
+}
+
+.designer-properties::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.designer-properties::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+.designer-properties::-webkit-scrollbar-track {
+  background: #f1f1f1;
 }
 </style>
 
