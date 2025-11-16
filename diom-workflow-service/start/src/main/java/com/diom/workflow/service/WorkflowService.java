@@ -79,11 +79,26 @@ public class WorkflowService {
         
         try {
             java.io.InputStream inputStream = repositoryService.getProcessModel(definition.getId());
-            return new String(inputStream.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+            byte[] bytes = readAllBytes(inputStream);
+            return new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
         } catch (Exception e) {
             log.error("获取流程定义XML失败: key={}", key, e);
             throw new RuntimeException("获取流程定义XML失败: " + e.getMessage());
         }
+    }
+    
+    /**
+     * 读取 InputStream 的所有字节 (Java 8 兼容)
+     */
+    private byte[] readAllBytes(java.io.InputStream inputStream) throws java.io.IOException {
+        java.io.ByteArrayOutputStream buffer = new java.io.ByteArrayOutputStream();
+        int nRead;
+        byte[] data = new byte[1024];
+        while ((nRead = inputStream.read(data, 0, data.length)) != -1) {
+            buffer.write(data, 0, nRead);
+        }
+        buffer.flush();
+        return buffer.toByteArray();
     }
 
     // ==================== 流程实例管理 ====================
