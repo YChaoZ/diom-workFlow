@@ -31,6 +31,16 @@ service.interceptors.response.use(
     
     // 如果返回的状态码不是200，说明接口有异常
     if (res.code !== 200) {
+      // ⚠️ 特殊处理：BPMN验证接口即使失败也不显示全局错误提示
+      // 因为验证失败是正常业务场景，需要在业务代码中处理详细错误
+      if (response.config.url && response.config.url.includes('/process-design/validate')) {
+        // 不显示全局错误提示，直接reject并保留完整数据
+        const error = new Error(res.message || 'Error')
+        error.response = { data: res }  // 保留原始响应数据
+        return Promise.reject(error)
+      }
+      
+      // 其他接口的错误处理
       ElMessage.error(res.message || '请求失败')
       
       // 401: Token过期或未登录
@@ -44,7 +54,9 @@ service.interceptors.response.use(
         }, 1000)
       }
       
-      return Promise.reject(new Error(res.message || 'Error'))
+      const error = new Error(res.message || 'Error')
+      error.response = { data: res }  // 保留原始响应数据
+      return Promise.reject(error)
     } else {
       return res
     }

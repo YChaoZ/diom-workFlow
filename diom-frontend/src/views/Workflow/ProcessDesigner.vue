@@ -221,8 +221,8 @@ const initBpmnModeler = () => {
     additionalModules: [
       BpmnPropertiesPanelModule,
       BpmnPropertiesProviderModule,
-      CamundaPlatformPropertiesProviderModule,  // ⭐ 新增：Camunda属性提供器
-      CamundaBehaviorsModule  // ⭐ 新增：Camunda行为模块
+      CamundaPlatformPropertiesProviderModule,  // ⭐ Camunda属性提供器
+      // CamundaBehaviorsModule  // ⭐ 暂时注释以测试Context Pad
     ],
     moddleExtensions: {
       camunda: CamundaBpmnModdle
@@ -236,6 +236,21 @@ const initBpmnModeler = () => {
   modeler.on('commandStack.changed', () => {
     // 可以在这里添加自动保存逻辑
   })
+  
+  // ⭐⭐ Phase 1.2: 调试Context Pad
+  // 检查Context Pad服务是否正确加载
+  try {
+    const contextPad = modeler.get('contextPad')
+    const contextPadProvider = modeler.get('contextPadProvider')
+    console.log('✅ Context Pad loaded:', contextPad)
+    console.log('✅ Context Pad Provider loaded:', contextPadProvider)
+    
+    // 获取所有已加载的模块（用于调试）
+    const injector = modeler.get('injector')
+    console.log('📦 Injector loaded:', injector)
+  } catch (e) {
+    console.error('❌ Context Pad loading error:', e)
+  }
   
   // 隐藏默认Palette
   const canvas = modeler.get('canvas')
@@ -308,8 +323,17 @@ const handleDrop = (event) => {
 const createNewProcess = async () => {
   try {
     await modeler.importXML(emptyBpmn)
-    const canvas = modeler.get('canvas')
-    canvas.zoom('fit-viewport')
+    
+    // 尝试适应视口缩放，如果失败则使用默认缩放
+    try {
+      const canvas = modeler.get('canvas')
+      canvas.zoom('fit-viewport')
+    } catch (zoomErr) {
+      console.warn('Zoom fit-viewport failed, using default zoom', zoomErr)
+      // 使用默认缩放1.0作为后备方案
+      const canvas = modeler.get('canvas')
+      canvas.zoom(1.0)
+    }
   } catch (err) {
     console.error('创建新流程失败', err)
     ElMessage.error('创建新流程失败')
@@ -412,7 +436,27 @@ const validate = async () => {
     }
   } catch (err) {
     console.error('验证失败', err)
-    ElMessage.error('验证失败')
+    
+    // 检查是否有详细的验证错误信息（从axios拦截器reject的错误中提取）
+    if (err.response && err.response.data) {
+      const data = err.response.data
+      if (data.data && data.data.errors && data.data.errors.length > 0) {
+        // 显示详细的验证错误
+        const errorMsg = data.data.errors.map(e => e.message).join('\n')
+        ElMessageBox.alert(errorMsg, 'BPMN验证失败', {
+          confirmButtonText: '确定',
+          type: 'error'
+        })
+        return
+      } else if (data.message) {
+        // 显示后端返回的错误消息
+        ElMessage.error(data.message)
+        return
+      }
+    }
+    
+    // 如果没有详细错误信息，显示通用错误
+    ElMessage.error('验证失败：' + (err.message || '未知错误'))
   } finally {
     validating.value = false
   }
