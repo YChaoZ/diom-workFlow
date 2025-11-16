@@ -1,0 +1,161 @@
+# DIOM Gateway 生产环境配置
+# 
+# 使用方式:
+# 1. 复制此文件到 diom-gateway/src/main/resources/application-prod.yml
+# 2. 修改相关配置项（见 ✅ 标记）
+# 3. 启动时指定: java -jar diom-gateway.jar --spring.profiles.active=prod
+
+server:
+  port: 8080
+  # 连接超时配置
+  tomcat:
+    connection-timeout: 60000
+    max-connections: 10000
+    threads:
+      max: 200
+      min-spare: 10
+
+spring:
+  application:
+    name: diom-gateway
+  
+  # 云配置
+  cloud:
+    # Nacos配置
+    nacos:
+      discovery:
+        server-addr: nacos.company.com:8848  # ✅ 修改为生产Nacos地址
+        namespace: diom-workflow-prod  # ✅ 生产命名空间
+        group: DIOM_GROUP
+        username: nacos  # ✅ 如果Nacos开启了认证
+        password: nacos  # ✅ 修改为实际密码
+      config:
+        server-addr: nacos.company.com:8848  # ✅ 修改为生产Nacos地址
+        namespace: diom-workflow-prod
+        group: DIOM_GROUP
+        file-extension: yml
+        username: nacos
+        password: nacos
+    
+    # Gateway配置
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      
+      # 全局CORS配置
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            # ✅ 修改为实际前端域名
+            allowed-origins:
+              - "http://frontend-a.company.com"
+              - "http://frontend-b.company.com"
+              - "http://frontend-c.company.com"
+              - "https://frontend.company.com"
+            allowed-methods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowed-headers:
+              - "*"
+            allow-credentials: true
+            max-age: 3600
+      
+      # 路由配置
+      routes:
+        # 认证服务路由
+        - id: auth-service
+          uri: lb://diom-auth-service
+          predicates:
+            - Path=/auth/**
+          filters:
+            - StripPrefix=0
+        
+        # Web服务路由
+        - id: web-service
+          uri: lb://diom-web-service
+          predicates:
+            - Path=/user/**
+          filters:
+            - StripPrefix=0
+        
+        # 工作流服务路由
+        - id: workflow-service
+          uri: lb://diom-workflow-service
+          predicates:
+            - Path=/workflow/**
+          filters:
+            - StripPrefix=0
+        
+        # 流程设计器API路由
+        - id: process-design-service
+          uri: lb://diom-workflow-service
+          predicates:
+            - Path=/api/process-design/**
+          filters:
+            - StripPrefix=1
+
+# Dubbo配置
+dubbo:
+  application:
+    name: diom-gateway
+    qos-enable: false
+  protocol:
+    name: dubbo
+    port: -1
+  registry:
+    address: nacos://nacos.company.com:8848  # ✅ 修改为生产Nacos地址
+    parameters:
+      namespace: diom-workflow-prod
+      group: DIOM_GROUP
+      username: nacos
+      password: nacos
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    com.diom: INFO
+    org.springframework.cloud.gateway: INFO
+  file:
+    name: /var/log/diom-workflow/gateway/gateway.log  # ✅ 确保目录存在
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n"
+  logback:
+    rollingpolicy:
+      max-file-size: 100MB
+      max-history: 30
+      total-size-cap: 10GB
+
+# 监控配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+# 限流配置（Redis）
+# spring:
+#   redis:
+#     host: redis.company.com  # ✅ 修改为Redis地址
+#     port: 6379
+#     password: ${REDIS_PASSWORD}  # ✅ 使用环境变量
+#     database: 0
+#     lettuce:
+#       pool:
+#         max-active: 8
+#         max-idle: 8
+#         min-idle: 2
+

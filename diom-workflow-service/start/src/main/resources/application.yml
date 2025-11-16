@@ -1,0 +1,81 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: diom-workflow-service
+  cloud:
+    nacos:
+      discovery:
+        group: HTTP_GROUP  # HTTP服务使用独立Group
+  
+  # 数据源配置 - MySQL
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:diom_workflow}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:1qaz2wsx}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+
+# Camunda 配置
+camunda:
+  bpm:
+    admin-user:
+      id: admin
+      password: admin
+      firstName: Admin
+    filter:
+      create: All tasks
+    # 自动部署流程定义
+    auto-deployment-enabled: true
+    # 数据库配置
+    database:
+      schema-update: false  # 使用手动创建的表
+      type: mysql
+    # 作业执行器
+    job-execution:
+      enabled: true
+    # 历史级别
+    history-level: full
+    # 禁用Decision引擎（保留CMMN以确保表正确创建）
+    dmn-enabled: false
+
+# Dubbo 配置
+dubbo:
+  application:
+    name: ${spring.application.name}
+  protocol:
+    name: dubbo
+    port: -1  # 自动分配端口
+  registry:
+    address: nacos://${NACOS_SERVER_ADDR:localhost:8848}
+    parameters:
+      namespace: ${NACOS_NAMESPACE:}
+      group: DEFAULT_GROUP
+  consumer:
+    check: false
+    timeout: 3000
+    retries: 0
+
+# Actuator 配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    com.diom.workflow: DEBUG
+    org.camunda: DEBUG
+    org.camunda.bpm.engine.impl.persistence: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"

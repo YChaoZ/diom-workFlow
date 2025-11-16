@@ -1,0 +1,35 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: diom-web-service
+
+dubbo:
+  application:
+    name: diom-web-service
+  registry:
+    address: nacos://${NACOS_SERVER_ADDR:localhost:8848}
+  consumer:
+    check: false
+    timeout: 5000
+    retries: 0
+  protocol:
+    name: dubbo
+    port: -1
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    root: INFO
+    com.diom.web: DEBUG
+    org.apache.dubbo: INFO
+

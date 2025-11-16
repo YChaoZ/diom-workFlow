@@ -1,0 +1,73 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: diom-auth-service
+  cloud:
+    nacos:
+      discovery:
+        group: HTTP_GROUP  # HTTP服务使用独立Group（与bootstrap.yml保持一致）
+        metadata:
+          service-type: http
+          protocol: http
+          port: 8081
+  
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:diom_workflow}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=GMT%2B8
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:1qaz2wsx}
+  
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+    database: 0
+
+# MyBatis Plus 配置
+mybatis-plus:
+  mapper-locations: classpath:mapper/**/*.xml
+  type-aliases-package: com.diom.auth.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+# JWT 配置
+jwt:
+  secret: ${JWT_SECRET:diom-workflow-secret-key-must-be-at-least-256-bits-long-for-HS256}
+  expiration: 7200
+
+# Dubbo 配置
+dubbo:
+  application:
+    name: ${spring.application.name}
+  protocol:
+    name: dubbo
+    port: -1  # 自动分配端口
+  registry:
+    address: nacos://${NACOS_SERVER_ADDR:localhost:8848}
+    parameters:
+      namespace: ${NACOS_NAMESPACE:}
+      group: DEFAULT_GROUP
+  provider:
+    timeout: 3000
+    retries: 0
+  scan:
+    base-packages: com.diom.auth.dubbo
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    root: INFO
+    com.diom.auth: DEBUG
+

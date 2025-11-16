@@ -1,0 +1,32 @@
+#!/bin/bash
+
+# 在IDE中手动启动服务的顺序指南
+
+echo "=========================================="
+echo "🚀 服务启动顺序指南"
+echo "=========================================="
+echo ""
+echo "请在IDE中按以下顺序启动服务："
+echo ""
+echo "1️⃣  启动 auth-service (8081)"
+echo "   文件: diom-auth-service/src/main/java/com/diom/auth/AuthApplication.java"
+echo "   ⏳ 等待看到: '==== Auth 认证服务启动成功！ ==== Dubbo服务已暴露 ===='"
+echo ""
+echo "2️⃣  启动 web-service (8082)"
+echo "   文件: diom-web-service/web-start/src/main/java/com/diom/web/WebApplication.java"
+echo "   ⏳ 等待看到: '==== Web 服务启动成功！ ==== Dubbo Consumer 已启用 ===='"
+echo ""
+echo "3️⃣  启动 workflow-service (8083)"
+echo "   文件: diom-workflow-service/start/src/main/java/com/diom/workflow/WorkflowApplication.java"
+echo "   ⏳ 等待看到: '==== Workflow 工作流服务启动成功！ ==== Dubbo Consumer 已启用 ===='"
+echo ""
+echo "4️⃣  启动 gateway (8080)"
+echo "   文件: diom-gateway/src/main/java/com/diom/gateway/GatewayApplication.java"
+echo "   ⏳ 等待看到: '==== Gateway 网关启动成功！ ===='"
+echo ""
+echo "=========================================="
+echo "✅ 所有服务启动后，运行测试："
+echo "   cd /Users/yanchao/IdeaProjects/diom-workFlow"
+echo "   ./test-dubbo-rpc.sh"
+echo "=========================================="
+

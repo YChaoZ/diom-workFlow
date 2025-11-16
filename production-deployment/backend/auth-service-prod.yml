@@ -1,0 +1,100 @@
+# DIOM Auth Service 生产环境配置
+# 
+# 使用方式:
+# 1. 复制此文件到 diom-auth-service/src/main/resources/application-prod.yml
+# 2. 修改相关配置项（见 ✅ 标记）
+# 3. 启动时指定: java -jar diom-auth-service.jar --spring.profiles.active=prod
+
+server:
+  port: 8081
+
+spring:
+  application:
+    name: diom-auth-service
+  
+  # 数据源配置
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://db.company.com:3306/diom_workflow?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true  # ✅ 修改数据库地址
+    username: diom_user  # ✅ 修改为生产用户
+    password: ${DB_PASSWORD}  # ✅ 使用环境变量
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  
+  # Nacos配置
+  cloud:
+    nacos:
+      discovery:
+        server-addr: nacos.company.com:8848  # ✅ 修改为生产Nacos地址
+        namespace: diom-workflow-prod
+        group: DIOM_GROUP
+        username: nacos
+        password: nacos
+      config:
+        server-addr: nacos.company.com:8848
+        namespace: diom-workflow-prod
+        group: DIOM_GROUP
+        file-extension: yml
+
+# Dubbo配置
+dubbo:
+  application:
+    name: diom-auth-service
+    qos-enable: false
+  protocol:
+    name: dubbo
+    port: 20881
+    threads: 200
+  registry:
+    address: nacos://nacos.company.com:8848  # ✅ 修改为生产Nacos地址
+    parameters:
+      namespace: diom-workflow-prod
+      group: DIOM_GROUP
+  scan:
+    base-packages: com.diom.auth.service
+
+# MyBatis Plus配置
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# JWT配置
+jwt:
+  secret: ${JWT_SECRET:diom-workflow-secret-key-change-in-production}  # ✅ 使用环境变量
+  expiration: 3600  # Token过期时间（秒）
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    com.diom: INFO
+  file:
+    name: /var/log/diom-workflow/auth-service/auth.log
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n"
+  logback:
+    rollingpolicy:
+      max-file-size: 100MB
+      max-history: 30
+
+# 监控配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+

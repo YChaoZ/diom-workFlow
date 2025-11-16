@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.diom</groupId>
+        <artifactId>diom-web-service</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>web-infrastructure</artifactId>
+    <packaging>jar</packaging>
+
+    <name>web-infrastructure</name>
+    <description>Web 基础设施层：Dubbo Consumer，调用后端 RPC 服务</description>
+
+    <dependencies>
+        <!-- Web Domain 层 -->
+        <dependency>
+            <groupId>com.diom</groupId>
+            <artifactId>web-domain</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- Dubbo -->
+        <dependency>
+            <groupId>org.apache.dubbo</groupId>
+            <artifactId>dubbo-spring-boot-starter</artifactId>
+            <version>${dubbo.version}</version>
+        </dependency>
+
+        <!-- Dubbo Nacos Registry -->
+        <dependency>
+            <groupId>org.apache.dubbo</groupId>
+            <artifactId>dubbo-registry-nacos</artifactId>
+            <version>${dubbo.version}</version>
+        </dependency>
+
+        <!-- Diom API (Dubbo接口) -->
+        <dependency>
+            <groupId>com.diom</groupId>
+            <artifactId>diom-api</artifactId>
+            <version>${diom-api.version}</version>
+        </dependency>
+
+        <!-- Diom Common -->
+        <dependency>
+            <groupId>com.diom</groupId>
+            <artifactId>diom-common</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+        </dependency>
+
+        <!-- Lombok -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+

@@ -1,0 +1,102 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: diom-gateway
+  
+  main:
+    web-application-type: reactive
+  
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+        group: HTTP_GROUP  # 只发现HTTP_GROUP的服务
+    gateway:
+      discovery:
+        locator:
+          enabled: false  # 关闭自动服务发现路由，使用手动配置的路由
+          lower-case-service-id: true
+      
+      # 路由配置
+      routes:
+        # 认证服务路由（使用服务发现 + 自动过滤Dubbo端口）
+        - id: auth-service
+          uri: lb://diom-auth-service
+          predicates:
+            - Path=/auth/**
+          filters:
+            - StripPrefix=1
+        
+        # Web 服务路由
+        - id: web-service
+          uri: lb://diom-web-service
+          predicates:
+            - Path=/api/**
+          filters:
+            - StripPrefix=1
+        
+        # 用户服务路由（转发到web-service）
+        - id: user-service
+          uri: lb://diom-web-service
+          predicates:
+            - Path=/user/**
+          filters:
+            - StripPrefix=0
+        
+        # 工作流服务路由（不去掉前缀，后端Controller已包含/workflow）
+        - id: workflow-service
+          uri: lb://diom-workflow-service
+          predicates:
+            - Path=/workflow/**
+          filters:
+            - StripPrefix=0
+      
+      # 全局跨域配置
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOriginPatterns: "*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+            allowCredentials: true
+            maxAge: 3600
+
+# JWT 配置
+jwt:
+  secret: ${JWT_SECRET:diom-workflow-secret-key-must-be-at-least-256-bits-long-for-HS256}
+  expiration: 7200
+  header: Authorization
+  tokenPrefix: "Bearer "
+  whitelist:
+    - /auth/login
+    - /auth/register
+    - /auth/health
+    - /actuator/**
+    - /favicon.ico
+
+# Actuator 配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
+  endpoint:
+    health:
+      show-details: always
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    com.diom.gateway: DEBUG
+    org.springframework.cloud.gateway: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"
+

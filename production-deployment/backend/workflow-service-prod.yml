@@ -1,0 +1,117 @@
+# DIOM Workflow Service 生产环境配置
+# 
+# 使用方式:
+# 1. 复制此文件到 diom-workflow-service/start/src/main/resources/application-prod.yml
+# 2. 修改相关配置项（见 ✅ 标记）
+# 3. 启动时指定: java -jar diom-workflow-service.jar --spring.profiles.active=prod
+
+server:
+  port: 8085
+
+spring:
+  application:
+    name: diom-workflow-service
+  
+  # 数据源配置
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://db.company.com:3306/diom_workflow?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true  # ✅ 修改数据库地址
+    username: diom_user  # ✅ 修改为生产用户
+    password: ${DB_PASSWORD}  # ✅ 使用环境变量
+    hikari:
+      minimum-idle: 10
+      maximum-pool-size: 50
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  
+  # Nacos配置
+  cloud:
+    nacos:
+      discovery:
+        server-addr: nacos.company.com:8848  # ✅ 修改为生产Nacos地址
+        namespace: diom-workflow-prod
+        group: DIOM_GROUP
+        username: nacos
+        password: nacos
+      config:
+        server-addr: nacos.company.com:8848
+        namespace: diom-workflow-prod
+        group: DIOM_GROUP
+        file-extension: yml
+
+# Dubbo配置
+dubbo:
+  application:
+    name: diom-workflow-service
+    qos-enable: false
+  protocol:
+    name: dubbo
+    port: 20885
+    threads: 300
+  registry:
+    address: nacos://nacos.company.com:8848  # ✅ 修改为生产Nacos地址
+    parameters:
+      namespace: diom-workflow-prod
+      group: DIOM_GROUP
+  scan:
+    base-packages: com.diom.workflow
+
+# Camunda配置
+camunda:
+  bpm:
+    admin-user:
+      id: admin
+      password: ${CAMUNDA_ADMIN_PASSWORD:admin}  # ✅ 使用环境变量
+    filter:
+      create: All tasks
+    authorization:
+      enabled: true
+    job-execution:
+      enabled: true
+      deployment-aware: true
+      core-pool-size: 5
+      max-pool-size: 20
+      queue-capacity: 10
+    history-level: full
+    database:
+      type: mysql
+      schema-update: true
+
+# MyBatis Plus配置
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    com.diom: INFO
+    org.camunda: WARN
+  file:
+    name: /var/log/diom-workflow/workflow-service/workflow.log
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n"
+  logback:
+    rollingpolicy:
+      max-file-size: 100MB
+      max-history: 30
+
+# 监控配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+

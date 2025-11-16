@@ -1,0 +1,56 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: diom-web-service
+  cloud:
+    nacos:
+      discovery:
+        group: HTTP_GROUP  # HTTP服务使用独立Group
+  
+  main:
+    allow-bean-definition-overriding: true
+
+# Dubbo 配置
+dubbo:
+  application:
+    name: ${spring.application.name}
+  
+  # Dubbo 协议配置
+  protocol:
+    name: dubbo
+    port: -1  # 随机端口
+  
+  # 注册中心配置（使用 Nacos）
+  registry:
+    address: nacos://${NACOS_SERVER_ADDR:localhost:8848}
+    parameters:
+      namespace: ${NACOS_NAMESPACE:}
+      group: DEFAULT_GROUP
+  
+  # Consumer 配置
+  consumer:
+    check: false  # 启动时不检查 provider 是否可用
+    timeout: 3000
+    retries: 0
+
+# Actuator 配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,dubbo
+  endpoint:
+    health:
+      show-details: always
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    com.diom.web: DEBUG
+    org.apache.dubbo: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"
+

@@ -1,0 +1,102 @@
+package com.diom.gateway.config;
+
+import org.springframework.cloud.client.ServiceInstance;
+import org.springframework.cloud.loadbalancer.core.ServiceInstanceListSupplier;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+/**
+ * LoadBalancer 配置
+ * 过滤服务实例，只选择HTTP服务（排除Dubbo端口）
+ *
+ * @author diom
+ */
+@Configuration
+public class LoadBalancerConfig {
+
+    /**
+     * 自定义 ServiceInstanceListSupplier
+     * 根据 metadata 过滤服务实例，只保留 HTTP 服务
+     */
+    @Bean
+    public ServiceInstanceListSupplier serviceInstanceListSupplier(
+            ConfigurableApplicationContext context) {
+        
+        // 使用 Discovery Client 获取服务列表，并添加自定义过滤器
+        ServiceInstanceListSupplier delegate = ServiceInstanceListSupplier.builder()
+                .withDiscoveryClient()
+                .withCaching()
+                .build(context);
+
+        // 添加 metadata 过滤器
+        return new MetadataFilteredServiceInstanceListSupplier(delegate);
+    }
+
+    /**
+     * Metadata 过滤的 ServiceInstanceListSupplier
+     * 只选择带有 service-type=http 标记的服务实例
+     */
+    static class MetadataFilteredServiceInstanceListSupplier 
+            implements ServiceInstanceListSupplier {
+
+        private final ServiceInstanceListSupplier delegate;
+
+        public MetadataFilteredServiceInstanceListSupplier(
+                ServiceInstanceListSupplier delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public String getServiceId() {
+            return delegate.getServiceId();
+        }
+
+        @Override
+        public reactor.core.publisher.Flux<List<ServiceInstance>> get() {
+            return delegate.get().map(this::filterInstances);
+        }
+
+        /**
+         * 过滤服务实例
+         * 优先选择带有 service-type=http 的实例
+         * 如果没有找到，则返回所有实例（降级策略）
+         */
+        private List<ServiceInstance> filterInstances(
+                List<ServiceInstance> instances) {
+            
+            if (instances == null || instances.isEmpty()) {
+                return instances;
+            }
+
+            // 筛选标记为 HTTP 服务的实例
+            List<ServiceInstance> httpInstances = instances.stream()
+                    .filter(instance -> {
+                        String serviceType = instance.getMetadata()
+                                .get("service-type");
+                        return "http".equalsIgnoreCase(serviceType);
+                    })
+                    .collect(Collectors.toList());
+
+            // 如果找到了 HTTP 服务实例，返回这些实例
+            // 否则返回所有实例（降级策略，避免服务不可用）
+            if (!httpInstances.isEmpty()) {
+                return httpInstances;
+            }
+
+            // 如果没有 HTTP 标记，尝试排除 Dubbo 端口（20880附近）
+            List<ServiceInstance> nonDubboInstances = instances.stream()
+                    .filter(instance -> {
+                        int port = instance.getPort();
+                        return port < 20000 || port > 21000; // 排除 Dubbo 常用端口范围
+                    })
+                    .collect(Collectors.toList());
+
+            return nonDubboInstances.isEmpty() ? instances : nonDubboInstances;
+        }
+    }
+}
+
