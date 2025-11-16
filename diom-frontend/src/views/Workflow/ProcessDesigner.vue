@@ -30,6 +30,29 @@
       </div>
       
       <div class="toolbar-right">
+        <!-- ⭐ Phase 1.4: 编辑工具栏 - 撤销/重做 -->
+        <el-button-group style="margin-right: 10px">
+          <el-button @click="undo" :disabled="!canUndo" title="撤销 (Ctrl+Z)" size="default">
+            <el-icon><RefreshLeft /></el-icon>
+          </el-button>
+          <el-button @click="redo" :disabled="!canRedo" title="重做 (Ctrl+Y)" size="default">
+            <el-icon><RefreshRight /></el-icon>
+          </el-button>
+        </el-button-group>
+        
+        <!-- ⭐ Phase 1.4: 缩放工具 -->
+        <el-button-group style="margin-right: 10px">
+          <el-button @click="zoomIn" title="放大 (Ctrl++)" size="default">
+            <el-icon><ZoomIn /></el-icon>
+          </el-button>
+          <el-button @click="zoomOut" title="缩小 (Ctrl+-)" size="default">
+            <el-icon><ZoomOut /></el-icon>
+          </el-button>
+          <el-button @click="zoomReset" title="适应画布" size="default">
+            <el-icon><FullScreen /></el-icon>
+          </el-button>
+        </el-button-group>
+        
         <el-button @click="saveDraft" :loading="saving" v-if="!viewMode">
           <el-icon><DocumentAdd /></el-icon> 保存草稿
         </el-button>
@@ -112,7 +135,12 @@ import {
   Upload, 
   Clock, 
   Download, 
-  Back 
+  Back,
+  RefreshLeft,
+  RefreshRight,
+  ZoomIn,
+  ZoomOut,
+  FullScreen
 } from '@element-plus/icons-vue'
 
 // 引入bpmn-js
@@ -166,6 +194,10 @@ const publishing = ref(false)
 
 const historyDialogVisible = ref(false)
 const historyList = ref([])
+
+// ⭐ Phase 1.4: 撤销/重做状态
+const canUndo = ref(false)
+const canRedo = ref(false)
 
 // 空白BPMN模板
 const emptyBpmn = `<?xml version="1.0" encoding="UTF-8"?>
@@ -234,25 +266,11 @@ const initBpmnModeler = () => {
   
   // 监听流程变化
   modeler.on('commandStack.changed', () => {
-    // 可以在这里添加自动保存逻辑
+    // ⭐ Phase 1.4: 更新撤销/重做状态
+    updateUndoRedoState()
   })
   
-  // ⭐⭐ Phase 1.2: 调试Context Pad
-  // 检查Context Pad服务是否正确加载
-  try {
-    const contextPad = modeler.get('contextPad')
-    const contextPadProvider = modeler.get('contextPadProvider')
-    console.log('✅ Context Pad loaded:', contextPad)
-    console.log('✅ Context Pad Provider loaded:', contextPadProvider)
-    
-    // 获取所有已加载的模块（用于调试）
-    const injector = modeler.get('injector')
-    console.log('📦 Injector loaded:', injector)
-  } catch (e) {
-    console.error('❌ Context Pad loading error:', e)
-  }
-  
-  // 隐藏默认Palette
+  // 隐藏默认Palette（保留自定义Toolbar）
   const canvas = modeler.get('canvas')
   const paletteContainer = canvas._container.parentNode.querySelector('.djs-palette')
   if (paletteContainer) {
@@ -539,6 +557,91 @@ const goBack = () => {
   router.push('/workflow/design/list')
 }
 
+// ⭐⭐ Phase 1.4: 编辑工具栏方法 ⭐⭐
+
+// 更新撤销/重做状态
+const updateUndoRedoState = () => {
+  if (!modeler) return
+  
+  try {
+    const commandStack = modeler.get('commandStack')
+    canUndo.value = commandStack.canUndo()
+    canRedo.value = commandStack.canRedo()
+  } catch (e) {
+    console.error('更新撤销/重做状态失败', e)
+  }
+}
+
+// 撤销
+const undo = () => {
+  if (!modeler || !canUndo.value) return
+  
+  try {
+    const commandStack = modeler.get('commandStack')
+    commandStack.undo()
+  } catch (e) {
+    console.error('撤销失败', e)
+    ElMessage.error('撤销失败')
+  }
+}
+
+// 重做
+const redo = () => {
+  if (!modeler || !canRedo.value) return
+  
+  try {
+    const commandStack = modeler.get('commandStack')
+    commandStack.redo()
+  } catch (e) {
+    console.error('重做失败', e)
+    ElMessage.error('重做失败')
+  }
+}
+
+// 放大
+const zoomIn = () => {
+  if (!modeler) return
+  
+  try {
+    const canvas = modeler.get('canvas')
+    const currentZoom = canvas.zoom()
+    canvas.zoom(currentZoom + 0.1)
+  } catch (e) {
+    console.error('放大失败', e)
+  }
+}
+
+// 缩小
+const zoomOut = () => {
+  if (!modeler) return
+  
+  try {
+    const canvas = modeler.get('canvas')
+    const currentZoom = canvas.zoom()
+    canvas.zoom(Math.max(0.2, currentZoom - 0.1)) // 最小缩放0.2
+  } catch (e) {
+    console.error('缩小失败', e)
+  }
+}
+
+// 重置缩放（适应画布）
+const zoomReset = () => {
+  if (!modeler) return
+  
+  try {
+    const canvas = modeler.get('canvas')
+    canvas.zoom('fit-viewport')
+  } catch (e) {
+    console.warn('适应画布失败，使用默认缩放', e)
+    try {
+      const canvas = modeler.get('canvas')
+      canvas.zoom(1.0)
+    } catch (innerErr) {
+      console.error('重置缩放失败', innerErr)
+    }
+  }
+}
+
 // 获取操作类型标签
 const getActionType = (action) => {
   const types = {
@@ -634,8 +737,24 @@ const getActionLabel = (action) => {
   top: 20px;
 }
 
+/* ⭐ Phase 1.4: 网格背景 */
 :deep(.djs-container) {
   background-color: #fafafa;
+  background-image: 
+    linear-gradient(#e5e5e5 1px, transparent 1px),
+    linear-gradient(90deg, #e5e5e5 1px, transparent 1px),
+    linear-gradient(#e0e0e0 1px, transparent 1px),
+    linear-gradient(90deg, #e0e0e0 1px, transparent 1px);
+  background-size: 
+    20px 20px,
+    20px 20px,
+    100px 100px,
+    100px 100px;
+  background-position: 
+    -1px -1px,
+    -1px -1px,
+    -1px -1px,
+    -1px -1px;
 }
 
 /* ===== 属性面板整体样式 ===== */
@@ -828,6 +947,51 @@ const getActionLabel = (action) => {
 
 .designer-properties::-webkit-scrollbar-track {
   background: #f1f1f1;
+}
+
+/* ⭐⭐ Phase 1.4: 选中元素高亮效果 ⭐⭐ */
+:deep(.djs-shape.selected .djs-visual > :first-child),
+:deep(.djs-connection.selected .djs-visual > :first-child) {
+  stroke: #409eff !important;
+  stroke-width: 3px !important;
+  filter: drop-shadow(0 0 8px rgba(64, 158, 255, 0.4));
+}
+
+:deep(.djs-shape:hover .djs-visual > :first-child) {
+  stroke: #66b1ff !important;
+  stroke-width: 2px !important;
+  filter: drop-shadow(0 0 4px rgba(102, 177, 255, 0.3));
+}
+
+/* Context Pad样式优化 */
+:deep(.djs-context-pad) {
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15));
+}
+
+:deep(.djs-context-pad .entry) {
+  transition: all 0.2s ease;
+}
+
+:deep(.djs-context-pad .entry:hover) {
+  transform: scale(1.1);
+  background-color: #409eff !important;
+}
+
+/* 连接线样式优化 */
+:deep(.djs-connection.hover .djs-visual > :first-child) {
+  stroke: #66b1ff !important;
+  stroke-width: 2px !important;
+}
+
+/* 画布拖拽时的光标 */
+:deep(.djs-container.djs-dragging) {
+  cursor: move !important;
+}
+
+/* 提升性能：硬件加速 */
+:deep(.djs-shape),
+:deep(.djs-connection) {
+  will-change: transform;
 }
 </style>
 
