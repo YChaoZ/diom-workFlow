@@ -457,9 +457,9 @@ curl http://localhost:8080/actuator/health
 
 ## 联系方式
 
-- 作者: Diom Team
-- Email: contact@diom.com
-- 项目地址: https://github.com/diom/diom-workflow
+- 作者: 简单
+- Email: 164992121@qq.com
+- 项目地址: https://github.com/YChaoZ/diom-workFlow
 
 ---
 
