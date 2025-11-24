@@ -45,11 +45,19 @@ spring:
           filters:
             - StripPrefix=0
         
-        # 工作流服务路由（不去掉前缀，后端Controller已包含/workflow）
+        # 工作流服务路由 - Camunda（不去掉前缀，后端Controller已包含/workflow）
         - id: workflow-service
           uri: lb://diom-workflow-service
           predicates:
             - Path=/workflow/**
+          filters:
+            - StripPrefix=0
+        
+        # 工作流服务路由 - Flowable（新引擎，并行部署）
+        - id: flowable-service
+          uri: lb://diom-flowable-service
+          predicates:
+            - Path=/flowable/**
           filters:
             - StripPrefix=0
       

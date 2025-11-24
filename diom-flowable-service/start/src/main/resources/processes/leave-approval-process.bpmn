@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:flowable="http://flowable.org/bpmn"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  id="Definitions_LeaveApproval"
+  targetNamespace="http://bpmn.io/schema/bpmn"
+  exporter="Flowable Modeler"
+  exporterVersion="6.7.2">
+
+  <bpmn:process id="leave-approval-process" name="请假审批流程" isExecutable="true">
+    
+    <!-- 开始事件 -->
+    <bpmn:startEvent id="start" name="发起请假申请">
+      <bpmn:outgoing>flow1</bpmn:outgoing>
+    </bpmn:startEvent>
+    
+    <bpmn:sequenceFlow id="flow1" sourceRef="start" targetRef="fillLeaveForm"/>
+    
+    <!-- 用户任务：填写请假单 -->
+    <bpmn:userTask id="fillLeaveForm" name="填写请假单" flowable:assignee="${applicant}">
+      <bpmn:extensionElements>
+        <flowable:taskListener delegateExpression="${taskNotificationListener}" event="create"/>
+        <flowable:taskListener delegateExpression="${taskNotificationListener}" event="complete"/>
+        <flowable:formData>
+          <flowable:formField id="leaveType" label="请假类型" type="enum">
+            <flowable:value id="annual" name="年假"/>
+            <flowable:value id="sick" name="病假"/>
+            <flowable:value id="personal" name="事假"/>
+          </flowable:formField>
+          <flowable:formField id="startDate" label="开始日期" type="date"/>
+          <flowable:formField id="endDate" label="结束日期" type="date"/>
+          <flowable:formField id="reason" label="请假原因" type="string"/>
+          <flowable:formField id="days" label="请假天数" type="long"/>
+        </flowable:formData>
+      </bpmn:extensionElements>
+      <bpmn:incoming>flow1</bpmn:incoming>
+      <bpmn:outgoing>flow2</bpmn:outgoing>
+    </bpmn:userTask>
+    
+    <bpmn:sequenceFlow id="flow2" sourceRef="fillLeaveForm" targetRef="notifyManager"/>
+    
+    <!-- 服务任务：通知经理 -->
+    <bpmn:serviceTask id="notifyManager" name="通知部门经理" flowable:delegateExpression="${notifyManagerService}">
+      <bpmn:incoming>flow2</bpmn:incoming>
+      <bpmn:outgoing>flow3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <bpmn:sequenceFlow id="flow3" sourceRef="notifyManager" targetRef="managerApproval"/>
+    
+    <!-- 用户任务：经理审批 -->
+    <bpmn:userTask id="managerApproval" name="部门经理审批" flowable:assignee="${manager}">
+      <bpmn:extensionElements>
+        <flowable:taskListener delegateExpression="${taskNotificationListener}" event="create"/>
+        <flowable:taskListener delegateExpression="${taskNotificationListener}" event="complete"/>
+        <flowable:formData>
+          <flowable:formField id="approved" label="是否同意" type="boolean"/>
+          <flowable:formField id="approvalComment" label="审批意见" type="string"/>
+        </flowable:formData>
+      </bpmn:extensionElements>
+      <bpmn:incoming>flow3</bpmn:incoming>
+      <bpmn:outgoing>flow4</bpmn:outgoing>
+    </bpmn:userTask>
+    
+    <bpmn:sequenceFlow id="flow4" sourceRef="managerApproval" targetRef="approvalGateway"/>
+    
+    <!-- 排他网关：根据审批结果分支 -->
+    <bpmn:exclusiveGateway id="approvalGateway" name="审批结果？">
+      <bpmn:incoming>flow4</bpmn:incoming>
+      <bpmn:outgoing>flowApproved</bpmn:outgoing>
+      <bpmn:outgoing>flowRejected</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    
+    <!-- 同意分支 -->
+    <bpmn:sequenceFlow id="flowApproved" name="同意" sourceRef="approvalGateway" targetRef="hrRecord">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${approved == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    
+    <!-- 服务任务：HR备案 -->
+    <bpmn:serviceTask id="hrRecord" name="HR备案" flowable:delegateExpression="${hrRecordService}">
+      <bpmn:incoming>flowApproved</bpmn:incoming>
+      <bpmn:outgoing>flowToApprovedEnd</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <bpmn:sequenceFlow id="flowToApprovedEnd" sourceRef="hrRecord" targetRef="notifyApplicantApproved"/>
+    
+    <!-- 服务任务：通知申请人（同意） -->
+    <bpmn:serviceTask id="notifyApplicantApproved" name="通知申请人（已批准）" flowable:delegateExpression="${notifyApplicantService}">
+      <bpmn:incoming>flowToApprovedEnd</bpmn:incoming>
+      <bpmn:outgoing>flowEndApproved</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <bpmn:sequenceFlow id="flowEndApproved" sourceRef="notifyApplicantApproved" targetRef="endApproved"/>
+    
+    <!-- 结束事件：审批通过 -->
+    <bpmn:endEvent id="endApproved" name="审批通过">
+      <bpmn:incoming>flowEndApproved</bpmn:incoming>
+    </bpmn:endEvent>
+    
+    <!-- 拒绝分支 -->
+    <bpmn:sequenceFlow id="flowRejected" name="拒绝" sourceRef="approvalGateway" targetRef="notifyApplicantRejected">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${approved == false}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    
+    <!-- 服务任务：通知申请人（拒绝） -->
+    <bpmn:serviceTask id="notifyApplicantRejected" name="通知申请人（已拒绝）" flowable:delegateExpression="${notifyApplicantService}">
+      <bpmn:incoming>flowRejected</bpmn:incoming>
+      <bpmn:outgoing>flowEndRejected</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <bpmn:sequenceFlow id="flowEndRejected" sourceRef="notifyApplicantRejected" targetRef="endRejected"/>
+    
+    <!-- 结束事件：审批拒绝 -->
+    <bpmn:endEvent id="endRejected" name="审批拒绝">
+      <bpmn:incoming>flowEndRejected</bpmn:incoming>
+    </bpmn:endEvent>
+    
+  </bpmn:process>
+
+  <!-- BPMN图形定义（简化版） -->
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="leave-approval-process">
+      
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="start">
+        <dc:Bounds x="152" y="102" width="36" height="36"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="135" y="145" width="70" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="fillLeaveForm_di" bpmnElement="fillLeaveForm">
+        <dc:Bounds x="250" y="80" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="notifyManager_di" bpmnElement="notifyManager">
+        <dc:Bounds x="410" y="80" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="managerApproval_di" bpmnElement="managerApproval">
+        <dc:Bounds x="570" y="80" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="approvalGateway_di" bpmnElement="approvalGateway" isMarkerVisible="true">
+        <dc:Bounds x="730" y="95" width="50" height="50"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="723" y="71" width="64" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="hrRecord_di" bpmnElement="hrRecord">
+        <dc:Bounds x="850" y="80" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="notifyApplicantApproved_di" bpmnElement="notifyApplicantApproved">
+        <dc:Bounds x="1010" y="80" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="endApproved_di" bpmnElement="endApproved">
+        <dc:Bounds x="1172" y="102" width="36" height="36"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1165" y="145" width="50" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="notifyApplicantRejected_di" bpmnElement="notifyApplicantRejected">
+        <dc:Bounds x="850" y="220" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="endRejected_di" bpmnElement="endRejected">
+        <dc:Bounds x="1012" y="242" width="36" height="36"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1005" y="285" width="50" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      
+      <!-- 流程线 -->
+      <bpmndi:BPMNEdge id="flow1_di" bpmnElement="flow1">
+        <di:waypoint x="188" y="120"/>
+        <di:waypoint x="250" y="120"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="flow2_di" bpmnElement="flow2">
+        <di:waypoint x="350" y="120"/>
+        <di:waypoint x="410" y="120"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="flow3_di" bpmnElement="flow3">
+        <di:waypoint x="510" y="120"/>
+        <di:waypoint x="570" y="120"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="flow4_di" bpmnElement="flow4">
+        <di:waypoint x="670" y="120"/>
+        <di:waypoint x="730" y="120"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="flowApproved_di" bpmnElement="flowApproved">
+        <di:waypoint x="780" y="120"/>
+        <di:waypoint x="850" y="120"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="798" y="102" width="28" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="flowToApprovedEnd_di" bpmnElement="flowToApprovedEnd">
+        <di:waypoint x="950" y="120"/>
+        <di:waypoint x="1010" y="120"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="flowEndApproved_di" bpmnElement="flowEndApproved">
+        <di:waypoint x="1110" y="120"/>
+        <di:waypoint x="1172" y="120"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="flowRejected_di" bpmnElement="flowRejected">
+        <di:waypoint x="755" y="145"/>
+        <di:waypoint x="755" y="260"/>
+        <di:waypoint x="850" y="260"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="761" y="200" width="28" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="flowEndRejected_di" bpmnElement="flowEndRejected">
+        <di:waypoint x="950" y="260"/>
+        <di:waypoint x="1012" y="260"/>
+      </bpmndi:BPMNEdge>
+      
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn:definitions>
+

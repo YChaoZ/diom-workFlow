@@ -1,0 +1,96 @@
+server:
+  port: 8086
+
+spring:
+  application:
+    name: diom-flowable-service
+  cloud:
+    nacos:
+      discovery:
+        group: HTTP_GROUP  # HTTP服务使用独立Group
+  
+  # 数据源配置 - MySQL
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:diom_flowable}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:1qaz2wsx}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+
+# Flowable 配置
+flowable:
+  # 数据库配置
+  database-schema-update: true  # 首次启动自动建表，生产环境改为 false
+  database-type: mysql
+  
+  # 禁用身份管理引擎（我们使用独立的 Auth 服务）
+  idm-engine-enabled: false
+  
+  # 异步执行器
+  async-executor-activate: true
+  async-executor:
+    default-async-job-acquire-wait-time: PT5S
+    default-timer-job-acquire-wait-time: PT5S
+  
+  # 历史级别（对应 Camunda 的 full）
+  history-level: full
+  
+  # 自动部署流程定义
+  check-process-definitions: true
+  process-definition-location-prefix: classpath*:/processes/
+  process-definition-location-suffixes: "**.bpmn20.xml,**.bpmn"
+  
+  # 禁用 IDM 引擎（使用自己的用户管理）
+  idm-engine-configurator-enabled: false
+  
+  # 作业执行器
+  async-executor-enabled: true
+
+# MyBatis Plus 配置
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.diom.flowable.entity
+
+# Dubbo 配置
+dubbo:
+  application:
+    name: ${spring.application.name}
+  protocol:
+    name: dubbo
+    port: -1  # 自动分配端口
+  registry:
+    address: nacos://${NACOS_SERVER_ADDR:localhost:8848}
+    parameters:
+      namespace: ${NACOS_NAMESPACE:}
+      group: DEFAULT_GROUP
+  consumer:
+    check: false
+    timeout: 3000
+    retries: 0
+
+# Actuator 配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,flowable
+  endpoint:
+    health:
+      show-details: always
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    com.diom.flowable: DEBUG
+    org.flowable: INFO
+    org.flowable.engine.impl.persistence: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"
+
