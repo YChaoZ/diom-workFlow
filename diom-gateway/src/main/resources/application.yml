@@ -45,19 +45,27 @@ spring:
           filters:
             - StripPrefix=0
         
-        # 工作流服务路由 - Camunda（不去掉前缀，后端Controller已包含/workflow）
+        # 工作流服务路由 - Flowable（已替换 Camunda）
         - id: workflow-service
-          uri: lb://diom-workflow-service
+          uri: lb://diom-flowable-service
           predicates:
             - Path=/workflow/**
           filters:
             - StripPrefix=0
         
-        # 工作流服务路由 - Flowable（新引擎，并行部署）
-        - id: flowable-service
+        # Flowable Modeler 路由（流程设计器 - 可选，如使用独立设计器）
+        - id: flowable-modeler
           uri: lb://diom-flowable-service
           predicates:
-            - Path=/flowable/**
+            - Path=/flowable-modeler/**,/app/**,/modeler-app/**
+          filters:
+            - StripPrefix=0
+        
+        # Flowable REST API 路由（可选，如需要原生 Flowable API）
+        - id: flowable-rest
+          uri: lb://diom-flowable-service
+          predicates:
+            - Path=/flowable-rest/**
           filters:
             - StripPrefix=0
       
@@ -88,6 +96,16 @@ jwt:
     - /auth/health
     - /actuator/**
     - /favicon.ico
+    # Flowable Modeler 静态资源白名单
+    - /flowable-modeler/**/*.html
+    - /flowable-modeler/**/*.js
+    - /flowable-modeler/**/*.css
+    - /flowable-modeler/**/*.png
+    - /flowable-modeler/**/*.jpg
+    - /flowable-modeler/**/*.svg
+    - /flowable-modeler/i18n/**
+    - /flowable-modeler/editor-app/**
+    - /flowable-modeler/app/**/*.html
 
 # Actuator 配置
 management:

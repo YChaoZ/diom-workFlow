@@ -65,24 +65,38 @@ const routes = [
       component: () => import('@/views/Workflow/ProcessDesignList.vue'),
       meta: { title: '流程设计器', icon: 'Edit', parent: '工作流管理', requireRole: 'SUPER_ADMIN' }
     },
+    // Flowable Modeler 路由（替代 bpmn.js）
+    {
+      path: '/workflow/modeler',
+      name: 'FlowableModeler',
+      component: () => import('@/views/Workflow/FlowableModeler.vue'),
+      meta: { title: 'Flowable 流程设计器', hidden: true, permission: 'workflow:design:access' }
+    },
     {
       path: '/workflow/design/new',
       name: 'ProcessDesignNew',
-      component: () => import('@/views/Workflow/ProcessDesigner.vue'),
+      component: () => import('@/flyflow/views/flow/create.vue'),
       meta: { title: '新建流程', hidden: true, permission: 'workflow:design:create' }
     },
     {
       path: '/workflow/design/edit/:id',
       name: 'ProcessDesignEdit',
-      component: () => import('@/views/Workflow/ProcessDesigner.vue'),
+      component: () => import('@/flyflow/views/flow/create.vue'),
       meta: { title: '编辑流程', hidden: true, permission: 'workflow:design:edit' }
     },
-    {
-      path: '/workflow/design/view/:id',
-      name: 'ProcessDesignView',
-      component: () => import('@/views/Workflow/ProcessDesigner.vue'),
-      meta: { title: '查看流程', hidden: true, permission: 'workflow:design:view' }
-    },
+      {
+        path: '/workflow/design/view/:id',
+        name: 'ProcessDesignView',
+        component: () => import('@/views/Workflow/FlowableModeler.vue'),
+        meta: { title: '查看流程', hidden: true, permission: 'workflow:design:view' }
+      },
+      // FlyFlow 测试页面
+      {
+        path: '/workflow/flyflow-test',
+        name: 'FlyFlowTest',
+        component: () => import('@/views/Workflow/FlyFlowTest.vue'),
+        meta: { title: 'FlyFlow 测试', icon: 'Test', parent: '工作流管理', hidden: false }
+      },
     {
       path: '/notifications',
       name: 'Notifications',

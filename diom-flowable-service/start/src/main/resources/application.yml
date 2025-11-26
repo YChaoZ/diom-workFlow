@@ -9,6 +9,18 @@ spring:
       discovery:
         group: HTTP_GROUP  # HTTP服务使用独立Group
   
+  # 禁用 Spring Boot 的 Liquibase 自动配置
+  liquibase:
+    enabled: false
+  
+  # Web 资源映射（Flowable Modeler 前端资源）
+  resources:
+    static-locations:
+      - classpath:/static/
+      - classpath:/public/
+      - classpath:/resources/
+      - classpath:/META-INF/resources/
+  
   # 数据源配置 - MySQL
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -22,12 +34,18 @@ spring:
 
 # Flowable 配置
 flowable:
-  # 数据库配置
-  database-schema-update: true  # 首次启动自动建表，生产环境改为 false
+  # 数据库配置 - 禁用自动建表（表已手动创建）
+  database-schema-update: false
   database-type: mysql
   
   # 禁用身份管理引擎（我们使用独立的 Auth 服务）
   idm-engine-enabled: false
+  
+  # 禁用事件注册引擎
+  event-registry-enabled: false
+  
+  # 禁用应用引擎
+  app-engine-enabled: false
   
   # 异步执行器
   async-executor-activate: true
@@ -48,6 +66,12 @@ flowable:
   
   # 作业执行器
   async-executor-enabled: true
+  
+  # REST API 配置
+  rest:
+    app:
+      # 启用基础认证（由 Spring Security 处理）
+      authentication-mode: any-user
 
 # MyBatis Plus 配置
 mybatis-plus:
@@ -79,10 +103,24 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,flowable
+        include: health,info,metrics,flowable,loggers,env,beans,configprops
+      base-path: /actuator
   endpoint:
     health:
       show-details: always
+      enabled: true
+    info:
+      enabled: true
+    metrics:
+      enabled: true
+    loggers:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
 
 # 日志配置
 logging:
@@ -91,6 +129,14 @@ logging:
     com.diom.flowable: DEBUG
     org.flowable: INFO
     org.flowable.engine.impl.persistence: DEBUG
+    org.springframework.cloud.gateway: INFO
+    com.alibaba.nacos: INFO
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"
+  file:
+    name: logs/diom-flowable-service.log
+    max-size: 100MB
+    max-history: 30
+    total-size-cap: 1GB
 
